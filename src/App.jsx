@@ -1,33 +1,54 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState,useEffect } from "react"
+import Footer from "./components/Footer"
+import Main from "./components/Main"
+import Sidebar from "./components/Sidebar"
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [showModel, setShowModel] = useState(false)
+  
+  function handleToggleModel(){
+    setShowModel(!showModel)
+  }
+  
+  useEffect(() => {
+    const NASA_KEY = import.meta.env.VITE_NASA_API_KEY
+    async function fetchAPIData() {
+      const url = 'https://api.nasa.gov/planetary/apod' + `?api_key=${NASA_KEY}`
+      
+      const today = (new Date()).toDateString()
+      const localKey = `NASA-${today}`
+      if (localStorage.getItem(localKey)) {
+        const apiData = JSON.parse(localStorage.getItem(localKey))
+        setData(apiData)
+        console.log('fetched from cache today')
+        return
+      }
+      localStorage.clear()
+      
+      try{
+        const res = await fetch(url)
+        const apiData = await res.json()
+        localStorage.setItem(localKey, JSON.stringify(apiData))
+        setData(apiData)
+        console.log("fetched from api today")
+      } catch (err) {
+        console.log(err.message)
+      }
+    }
+    fetchAPIData()
+  }, [])
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {data ? (<Main data={data} />) : (
+        <div className="loadingState">
+          <i className="fa-solid fa-gear"></i>
+        </div>
+      )}
+      {showModel && (<Sidebar data={data} handleToggleModel={handleToggleModel} />)}
+      {data && (<Footer data={data} handleToggleModel={handleToggleModel} />)}
     </>
   )
 }
